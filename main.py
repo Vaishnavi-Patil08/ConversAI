@@ -12,17 +12,12 @@ import prompts
 
 
 def main():
-    # init db
     db.init_db()
 
-    # create LLM
     llm =  ChatGoogleGenerativeAI(model=config.LLM_MODEL, api_key=config.GOOGLE_API_KEY) 
-    
 
-    # load tools
     tools = get_tools_list()
 
-    # optional: build retriever from webpages (wrapped into tool)
     try:
         retriever, retriever_tool = build_retriever_from_urls(["https://docs.smith.langchain.com/"])
         tools.append(retriever_tool)
@@ -79,7 +74,6 @@ def main():
         answer = res.get("output") or res.get("result") or str(res)
         print("\nAssistant>", answer)
 
-        # log conversation to SQLite (and memory already saved by memory.save_context)
         db.log_conversation(query, answer)
 
 if __name__ == "__main__":
