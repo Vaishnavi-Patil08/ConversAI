@@ -15,6 +15,10 @@ import datetime
 from langchain.schema import HumanMessage
 from langchain.tools import BaseTool
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_community.tools import DuckDuckGoSearchRun
+from langchain_community.utilities import DuckDuckGoSearchAPIWrapper
+import spotipy
+from spotipy.oauth2 import SpotifyOAuth
 
 
 def weather(city:str)->str:
@@ -63,9 +67,43 @@ tool_chatbot = Tool(
     description="Answer casual questions or chit-chat with the user."
 )
 
+wiki_api_wrapper=WikipediaAPIWrapper(top_k_results=1, doc_content_chars_max=200)
+tool_wiki= WikipediaQueryRun(api_wrapper= wiki_api_wrapper)
+   
 
+arxiv_wrapper=ArxivAPIWrapper(top_k_results=1,doc_content_chars_max=200)
+tool_arxiv= ArxivQueryRun(api_wrapper=arxiv_wrapper)
+   
+
+duckduckgo_wrapper=DuckDuckGoSearchAPIWrapper()
+tool_search=DuckDuckGoSearchRun(api_wrapper=duckduckgo_wrapper)
+
+
+sp_oauth = SpotifyOAuth(
+    client_id=config.SPOTIFY_CLIENT_ID,
+    client_secret=config.SPOTIFY_CLIENT_SECRET,
+    redirect_uri=config.SPOTIFY_URI,
+    scope="user-library-read user-read-playback-state streaming playlist-modify-public"
+)
+
+sp = spotipy.Spotify(auth_manager=sp_oauth)
+
+@tool
+def tool_spotify(query: str) -> str:
+    """
+    Search for tracks on Spotify by a query string.
+    """
+    results = sp.search(q=query, type='track', limit=3)
+    tracks = results.get('tracks', {}).get('items', [])
+    if not tracks:
+        return "No tracks found."
+    response = "Top tracks:\n"
+    for i, track in enumerate(tracks, 1):
+        artists = ', '.join(artist['name'] for artist in track['artists'])
+        response += f"{i}. {track['name']} by {artists}\n"
+    return response
 
 
 
 def get_tools_list():
-    return [tool_weather,tool_news,tool_chatbot]
+    return [tool_weather,tool_news,tool_chatbot,tool_wiki,tool_arxiv,tool_search,tool_spotify]

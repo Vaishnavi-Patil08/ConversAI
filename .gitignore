@@ -1,1 +1,23 @@
-.env
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# VSCode settings
+.vscode/
+
+# Environment
+venv/
+.env/
+
+# Cache
+.cache/
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Other generated files
+*.log
