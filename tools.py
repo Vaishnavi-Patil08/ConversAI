@@ -10,7 +10,7 @@ from langchain_community.utilities import ArxivAPIWrapper
 from langchain_community.tools import ArxivQueryRun
 from langchain_community.vectorstores import FAISS
 import requests
-import http.client, urllib.parse
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 import datetime
 from langchain.schema import HumanMessage
 from langchain.tools import BaseTool
@@ -19,6 +19,14 @@ from langchain_community.tools import DuckDuckGoSearchRun
 from langchain_community.utilities import DuckDuckGoSearchAPIWrapper
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
+from langchain.chains.retrieval import create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain_google_genai import ChatGoogleGenerativeAI
+from sentence_transformers import SentenceTransformer
+from langchain_core.prompts import ChatPromptTemplate
+from typing import List
+from langchain.embeddings.base import Embeddings
+from langchain.tools.retriever import create_retriever_tool
 
 
 def weather(city:str)->str:
@@ -103,7 +111,27 @@ def tool_spotify(query: str) -> str:
         response += f"{i}. {track['name']} by {artists}\n"
     return response
 
+class sentence_transformer(Embeddings):
+    def __init__(self, model_name):
+        self.model = SentenceTransformer(model_name)
+    def embed_documents(self, texts):
+        return self.model.encode(texts).tolist()
+    def embed_query(self, text):
+        return self.model.encode([text])[0].tolist()
 
+def build_pdf_retriever_tool(pdf_path):
+    loader = PyPDFLoader(pdf_path)
+    docs = loader.load()
+    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    chunks = splitter.split_documents(docs)
+    embedding_model = sentence_transformer(model_name="all-MiniLM-L6-v2")
+    db = FAISS.from_documents(chunks, embedding_model)
+    retriever = db.as_retriever()
+    return create_retriever_tool(
+        retriever,
+        name="pdf_retriever",
+        description="Search for answers in your uploaded PDF document."
+    )
 
 def get_tools_list():
     return [tool_weather,tool_news,tool_chatbot,tool_wiki,tool_arxiv,tool_search,tool_spotify]

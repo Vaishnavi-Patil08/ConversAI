@@ -21,3 +21,4 @@ arxiv
 supabase
 duckduckgo-search
 spotipy
+python-multipart
