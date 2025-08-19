@@ -9,7 +9,7 @@ import db
 from langchain.memory import ConversationBufferWindowMemory
 from langchain_google_genai import ChatGoogleGenerativeAI 
 import psutil
-
+from fastapi.responses import JSONResponse
 
 app = FastAPI()
 app.add_middleware(
@@ -52,8 +52,10 @@ base_executor = AgentExecutor.from_agent_and_tools(
     handle_parsing_errors=True,
 )
 
-@app.get("/health")
-async def health_check():
+@app.api_route("/health", methods=["GET","OPTIONS"])
+async def health_check(request:Request):
+    if request.method=="OPTIONS":
+        return JSONResponse(status_code=200,content={"status":"ok"})
     cpu_percent = psutil.cpu_percent(interval=0.1)
     memory = psutil.virtual_memory()
     return {
