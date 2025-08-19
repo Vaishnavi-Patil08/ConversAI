@@ -57,7 +57,7 @@ async def health_check(request:Request):
     if request.method=="OPTIONS":
         return JSONResponse(status_code=200,content={"status":"ok"})
     elif request.method=="HEAD":
-        return Response(status=200)
+        return Response(status_code=200)
     else:
         cpu_percent = psutil.cpu_percent(interval=0.1)
         memory = psutil.virtual_memory()
