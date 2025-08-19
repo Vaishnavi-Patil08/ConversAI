@@ -16,3 +16,4 @@ supabase
 duckduckgo-search
 spotipy
 python-multipart
+psutil

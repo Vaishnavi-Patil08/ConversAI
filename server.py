@@ -8,12 +8,13 @@ import config
 import db
 from langchain.memory import ConversationBufferWindowMemory
 from langchain_google_genai import ChatGoogleGenerativeAI 
+import psutil
 
 
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://convers-ai-frontend.vercel.app"],
+    allow_origins=["https://convers-ai-frontend.vercel.app", "http://localhost:3001"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -51,6 +52,17 @@ base_executor = AgentExecutor.from_agent_and_tools(
     handle_parsing_errors=True,
 )
 
+@app.get("/health")
+async def health_check():
+    cpu_percent = psutil.cpu_percent(interval=0.1)
+    memory = psutil.virtual_memory()
+    return {
+        "status": "ok",
+        "cpu_percent": cpu_percent,
+        "memory_used_mb": round(memory.used / 1024 / 1024, 2),
+        "memory_total_mb": round(memory.total / 1024 / 1024, 2),
+    }
+
 
 @app.post("/upload_pdf")
 async def upload_pdf(file: UploadFile = File(...), user_id: str = Form(...)):
@@ -62,6 +74,7 @@ async def upload_pdf(file: UploadFile = File(...), user_id: str = Form(...)):
     pdf_tool_cache[user_id] = pdf_tool
 
     return {"msg": "PDF uploaded and tool created"}
+
 
 @app.post("/chat")
 async def chat(request: Request):
