@@ -27,7 +27,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from typing import List
 from langchain.embeddings.base import Embeddings
 from langchain.tools.retriever import create_retriever_tool
-
+import gc
 
 def weather(city:str)->str:
 
@@ -127,6 +127,9 @@ def build_pdf_retriever_tool(pdf_path):
     embedding_model = sentence_transformer(model_name="all-MiniLM-L6-v2")
     db = FAISS.from_documents(chunks, embedding_model)
     retriever = db.as_retriever()
+    del chunks
+    del embedding_model
+    gc.collect()
     return create_retriever_tool(
         retriever,
         name="pdf_retriever",
