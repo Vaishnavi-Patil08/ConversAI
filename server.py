@@ -13,7 +13,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["https://convers-ai-frontend.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
