@@ -20,7 +20,37 @@ app.add_middleware(
 )
 
 llm =  ChatGoogleGenerativeAI(model=config.LLM_MODEL, api_key=config.GOOGLE_API_KEY) 
-pdf_tool_cache = {}  
+pdf_tool_cache = {}
+
+base_tools = get_tools_list()
+
+memory = ConversationBufferWindowMemory(
+            k=10,  # Remember last 10 exchanges
+            memory_key="chat_history",
+            return_messages=True
+        )
+past_logs = db.fetch_logs()
+
+for log in past_logs[-10:]:
+    user_input = log["user_input"]
+    agent_response = log["agent_response"]
+    # Save each pair into memory context
+    memory.save_context({"input": user_input}, {"output": agent_response})
+
+base_agent = create_react_agent(
+    tools=base_tools,
+    llm=llm,
+    prompt=prompts.prompt,
+)
+
+base_executor = AgentExecutor.from_agent_and_tools(
+    agent=base_agent,
+    tools=base_tools,
+    memory=memory,
+    verbose=True,
+    handle_parsing_errors=True,
+)
+
 
 @app.post("/upload_pdf")
 async def upload_pdf(file: UploadFile = File(...), user_id: str = Form(...)):
@@ -39,40 +69,29 @@ async def chat(request: Request):
     user_id = data.get("user_id", "default")
     query = data.get("message")
 
-    tools = get_tools_list()
+    # tools = get_tools_list()
     if user_id in pdf_tool_cache:
-        tools = tools + [pdf_tool_cache[user_id]]
+        tools = base_tools + [pdf_tool_cache[user_id]]
 
-    agent = create_react_agent(
-        tools=tools,
-        llm=llm,
-        prompt=prompts.prompt, 
-    )
-
-    memory = ConversationBufferWindowMemory(
-            k=10,  # Remember last 10 exchanges
-            memory_key="chat_history",
-            return_messages=True
-        )
-    past_logs = db.fetch_logs()
-
-    for log in past_logs[-10:]:
-        user_input = log["user_input"]
-        agent_response = log["agent_response"]
-        # Save each pair into memory context
-        memory.save_context({"input": user_input}, {"output": agent_response})
-
-
-    agent_executor = AgentExecutor.from_agent_and_tools(
-            agent=agent,
+        agent = create_react_agent(
             tools=tools,
-            memory=memory,
-            verbose=True,
-            handle_parsing_errors=True,
-            # max_iterations=3
+            llm=llm,
+            prompt=prompts.prompt, 
         )
 
-    result = agent_executor.invoke({"input": query})
+
+        agent_executor = AgentExecutor.from_agent_and_tools(
+                agent=agent,
+                tools=tools,
+                memory=memory,
+                verbose=True,
+                handle_parsing_errors=True,
+                # max_iterations=3
+            )
+
+        result = agent_executor.invoke({"input": query})
+    else:
+        result = base_executor.invoke({"input": query})
     answer = result.get("output") or result.get("result") or str(result)
     db.log_conversation(query, answer)
     return {"response": answer}
