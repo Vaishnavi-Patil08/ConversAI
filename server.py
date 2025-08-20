@@ -32,7 +32,7 @@ memory = ConversationBufferWindowMemory(
         )
 past_logs = db.fetch_logs()
 
-for log in past_logs[-10:]:
+for log in past_logs:
     user_input = log["user_input"]
     agent_response = log["agent_response"]
     # Save each pair into memory context

@@ -22,11 +22,11 @@ def log_conversation(user_input: str, agent_response: str):
 
 def fetch_logs():
     try:
-        response = supabase.table("conversations").select("*").order("id", desc=False).execute()
+        response = supabase.table("conversations").select("*").order("id", desc=True).limit(10).execute()
         if response.data:
-            for row in response.data:
+            for row in reversed(response.data):
                 print(f"{row['id']}: {row['user_input']} -> {row['agent_response']}")
-            return response.data
+            return reversed(response.data)
         else:
             print("No logs found")
             return []
